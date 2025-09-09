@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Model Evaluation Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 32px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .info-card {
+            background: #ecf0f1;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-left: 4px solid #3498db;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background: #3498db;
+            color: #fff;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        tr:hover {
+            background: #e8f4f8;
+        }
+        .metric-value {
+            font-weight: bold;
+        }
+        .high-score {
+            color: #27ae60;
+        }
+        .medium-score {
+            color: #f39c12;
+        }
+        .low-score {
+            color: #e74c3c;
+        }
+        .micro-row {
+            background: #d5dbdb !important;
+            font-weight: bold;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: #3498db;
+            color: #fff;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .back-btn:hover {
+            background: #2980b9;
+        }
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .error {
+            color: #e74c3c;
+            background: #fdf2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            table {
+                font-size: 0.9em;
+            }
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Model Evaluation Results</h1>
+        <p class="subtitle">GLiNER Multi-PII Domains Model Performance</p>
+       
+        {% if num_examples %}
+        <div class="info-card">
+            <strong>Dataset:</strong> Custom PII Evaluation Set<br>
+            <strong>Examples Evaluated:</strong> {{ num_examples }}<br>
+            <strong>Model:</strong> E3-JSI/gliner-multi-pii-domains-v1<br>
+            <strong>Threshold:</strong> 0.6
+        </div>
+        {% endif %}
+       
+        {% if metrics %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Entity Type</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                    <th>F1 Score</th>
+                    <th>Accuracy</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for label, vals in metrics.items() %}
+                <tr {% if label == 'micro' %}class="micro-row"{% endif %}>
+                    <td>
+                        {% if label == 'micro' %}
+                            <strong>📊 MICRO AVERAGE</strong>
+                        {% else %}
+                            {{ label.title() }}
+                        {% endif %}
+                    </td>
+                    <td class="metric-value {% if vals.precision >= 0.8 %}high-score{% elif vals.precision >= 0.6 %}medium-score{% else %}low-score{% endif %}">
+                        {{ '{:.1%}'.format(vals.precision) }}
+                    </td>
+                    <td class="metric-value {% if vals.recall >= 0.8 %}high-score{% elif vals.recall >= 0.6 %}medium-score{% else %}low-score{% endif %}">
+                        {{ '{:.1%}'.format(vals.recall) }}
+                    </td>
+                    <td class="metric-value {% if vals.f1 >= 0.8 %}high-score{% elif vals.f1 >= 0.6 %}medium-score{% else %}low-score{% endif %}">
+                        {{ '{:.1%}'.format(vals.f1) }}
+                    </td>
+                    <td class="metric-value {% if vals.accuracy >= 0.8 %}high-score{% elif vals.accuracy >= 0.6 %}medium-score{% else %}low-score{% endif %}">
+                        {{ '{:.1%}'.format(vals.accuracy) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+       
+        <div class="info-card" style="margin-top: 25px;">
+            <strong>📈 Score Legend:</strong><br>
+            <span class="high-score">● High (≥80%)</span> &nbsp;
+            <span class="medium-score">● Medium (60-79%)</span> &nbsp;
+            <span class="low-score">● Low (<60%)</span>
+        </div>
+        {% else %}
+        <div class="error">
+            <strong>⚠️ No evaluation results available</strong><br>
+            The evaluation could not be completed. Please check the logs for more information.
+        </div>
+        {% endif %}
+       
+        <div style="text-align: center;">
+            <a href="{{ url_for('index') }}" class="back-btn">🏠 Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

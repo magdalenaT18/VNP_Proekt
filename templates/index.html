@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>PDF Redaction Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #2c3e50;
+            margin: 40px 0 20px;
+            text-align: center;
+            font-size: 2em;
+        }
+        .upload-container, .llm-container, .analysis-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            margin: 20px auto;
+            text-align: center;
+        }
+        
+        /* LLM Analysis Section */
+        .llm-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .llm-title {
+            color: white;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .llm-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        
+        /* PDF Analysis Section */
+        .analysis-container {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            max-width: 600px;
+        }
+        
+        .analysis-title {
+            color: white;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .analysis-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        
+        .analysis-form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .analysis-label {
+            display: block;
+            margin-bottom: 8px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .analysis-file-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.95);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .analysis-file-input:hover, .analysis-file-input:focus {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .analysis-btn {
+            background: linear-gradient(45deg, #38ef7d, #11998e);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(56, 239, 125, 0.3);
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .analysis-btn:hover {
+            background: linear-gradient(45deg, #11998e, #0fb78d);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(56, 239, 125, 0.4);
+        }
+        
+        .analysis-btn:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+        
+        /* Results Display */
+        .analysis-results {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            text-align: left;
+            display: none;
+        }
+        
+        .results-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .results-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .processing-time {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 10px;
+        }
+        
+        .entity-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .entity-item {
+            background: rgba(255, 255, 255, 0.2);
+            margin: 5px 0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .entity-text {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .entity-type {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .comparison-summary {
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .llm-form-group, .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .llm-label, label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        label {
+            color: #34495e;
+        }
+        
+        .llm-label {
+            color: white;
+        }
+        
+        .llm-textarea {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.95);
+            min-height: 120px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+        
+        .llm-textarea:focus {
+            outline: none;
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .llm-textarea::placeholder {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .llm-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .llm-btn:hover {
+            background: linear-gradient(45deg, #ee5a24, #d63031);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+        
+        .feature-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            margin: 5px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .section-divider {
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ddd, transparent);
+            margin: 30px auto;
+        }
+        
+        input[type="file"], input[type="text"], input[type="search"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        input[type="file"] {
+            cursor: pointer;
+        }
+        input[type="file"]:hover, input[type="text"]:hover, input[type="search"]:hover {
+            border-color: #3498db;
+        }
+        select[multiple] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            background: #fff;
+            min-height: 120px;
+        }
+        select[multiple] option {
+            padding: 5px;
+        }
+        .radio-cards {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .radio-card {
+            flex: 1;
+            min-width: 160px;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .radio-card:hover {
+            border-color: #3498db;
+            box-shadow: 0 2px 12px rgba(52, 152, 219, 0.12);
+        }
+        .radio-card input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .card-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .card-description {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        .radio-card input:checked + .card-content {
+            background: rgba(52, 152, 219, 0.08);
+            border-radius: 8px;
+        }
+        .radio-card input:checked + .card-content .card-title {
+            color: #3498db;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 100%;
+        }
+        .download-btn{
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 30%;
+            text-align: center;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .footer {
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            text-align: center;
+        }
+        small {
+            color: #7f8c8d;
+        }
+        @media (max-width: 600px) {
+            .upload-container, .llm-container, .analysis-container {
+                padding: 20px;
+            }
+            .download-btn {
+                width: 80%;
+            }
+            .analysis-container {
+                max-width: 90%;
+            }
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDF Redaction Tool</h1>
+    
+    <!-- LLM Text Analysis Section -->
+    <div class="llm-container">
+        <div class="llm-title">🤖 AI-Powered Text Analysis</div>
+        <div class="llm-subtitle">Quickly analyze text for personally identifiable information using Claude AI</div>
+        
+        <div class="feature-badge">Claude AI</div>
+        <div class="feature-badge">Accurate</div>
+        <div class="feature-badge">Privacy-Focused</div>
+        
+        <form method="post" action="/llm_redact">
+            <div class="llm-form-group">
+                <label class="llm-label" for="llm-text">🔍 Enter Text to Analyze</label>
+                <textarea 
+                    id="llm-text" 
+                    name="text" 
+                    class="llm-textarea" 
+                    placeholder="Paste your text here for PII analysis...&#10;&#10;Example:&#10;John Doe lives at 123 Main St, New York, NY 10001. His email is john.doe@email.com and his phone number is (555) 123-4567. SSN: 123-45-6789."
+                    required
+                ></textarea>
+            </div>
+            <button type="submit" class="llm-btn">🔍 Analyze Text with Claude AI</button>
+        </form>
+    </div>
+
+    <!-- Section Divider -->
+    <div class="section-divider"></div>
+
+    <!-- PDF Analysis Comparison Section -->
+    <div class="analysis-container">
+        <div class="analysis-title">⚖️ PDF Analysis Comparison</div>
+        <div class="analysis-subtitle">Compare GLiNER vs Claude AI performance on PDF documents</div>
+        
+        <div class="feature-badge">GLiNER Model</div>
+        <div class="feature-badge">Claude AI</div>
+        <div class="feature-badge">Performance Metrics</div>
+        
+        <form id="pdf-analysis-form" enctype="multipart/form-data">
+            <div class="analysis-form-group">
+                <label class="analysis-label" for="analysis-file">📄 Upload PDF for Analysis</label>
+                <input 
+                    type="file" 
+                    id="analysis-file" 
+                    name="file" 
+                    accept=".pdf" 
+                    class="analysis-file-input"
+                    required
+                >
+            </div>
+            <button type="submit" class="analysis-btn" id="analyze-btn">
+                ⚡ Compare Analysis Methods
+            </button>
+        </form>
+        
+        <div class="error-message" id="analysis-error"></div>
+        
+        <div class="analysis-results" id="analysis-results">
+            <div class="results-section">
+                <div class="results-title">
+                    🧠 GLiNER Analysis
+                    <span class="loading-spinner" id="gliner-spinner" style="display: none;"></span>
+                </div>
+                <div class="processing-time" id="gliner-time"></div>
+                <ul class="entity-list" id="gliner-entities"></ul>
+            </div>
+            
+            <div class="results-section">
+                <div class="results-title">
+                    🤖 Claude AI Analysis
+                    <span class="loading-spinner" id="anthropic-spinner" style="display: none;"></span>
+                </div>
+                <div class="processing-time" id="anthropic-time"></div>
+                <div id="anthropic-results"></div>
+            </div>
+            
+            <div class="comparison-summary" id="comparison-summary">
+                <div class="results-title">📊 Performance Comparison</div>
+                <div id="comparison-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Divider -->
+    <div class="section-divider"></div>
+
+    <!-- PDF Upload Section -->
+    <div class="upload-container">
+        <h2 style="color: #2c3e50; margin-bottom: 20px;">📄 PDF File Redaction</h2>
+        
+        <form method="post" action="/upload" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Upload PDF File(s)</label>
+                <input type="file" id="file" name="file" accept=".pdf" multiple required>
+            </div>
+           
+            <div class="form-group">
+                <label for="pii-types">PII Types to Redact</label>
+                <input type="search" id="pii-search" placeholder="Search PII types..." class="search-box">
+                <select id="pii-types" name="pii_types" multiple required>
+                    <option value="person">Person</option>
+                    <option value="organization">Organization</option>
+                    <option value="phone_number">Phone Number</option>
+                    <option value="address">Address</option>
+                    <option value="passport_number">Passport Number</option>
+                    <option value="credit_card_number">Credit Card Number</option>
+                    <option value="social_security_number">Social Security Number</option>
+                    <option value="health_insurance_id_number">Health Insurance ID Number</option>
+                    <option value="date_of_birth">Date of Birth</option>
+                    <option value="mobile_phone_number">Mobile Phone Number</option>
+                    <option value="bank_account_number">Bank Account Number</option>
+                    <option value="medication">Medication</option>
+                    <option value="cpf">CPF (Brazilian Tax ID)</option>
+                    <option value="driver_license_number">Driver License Number</option>
+                    <option value="tax_identification_number">Tax Identification Number</option>
+                    <option value="medical_condition">Medical Condition</option>
+                    <option value="identity_card_number">Identity Card Number</option>
+                    <option value="national_id_number">National ID Number</option>
+                    <option value="ip_address">IP Address</option>
+                    <option value="email_address">Email Address</option>
+                    <option value="iban">IBAN</option>
+                    <option value="credit_card_expiration_date">Credit Card Expiration Date</option>
+                    <option value="username">Username</option>
+                    <option value="health_insurance_number">Health Insurance Number</option>
+                    <option value="registration_number">Registration Number</option>
+                    <option value="student_id_number">Student ID Number</option>
+                    <option value="insurance_number">Insurance Number</option>
+                    <option value="flight_number">Flight Number</option>
+                    <option value="landline_phone_number">Landline Phone Number</option>
+                    <option value="blood_type">Blood Type</option>
+                    <option value="cvv">CVV</option>
+                    <option value="reservation_number">Reservation Number</option>
+                    <option value="digital_signature">Digital Signature</option>
+                    <option value="social_media_handle">Social Media Handle</option>
+                    <option value="license_plate_number">License Plate Number</option>
+                    <option value="cnpj">CNPJ (Brazilian Company ID)</option>
+                    <option value="postal_code">Postal Code</option>
+                    <option value="serial_number">Serial Number</option>
+                    <option value="vehicle_registration_number">Vehicle Registration Number</option>
+                    <option value="credit_card_brand">Credit Card Brand</option>
+                    <option value="fax_number">Fax Number</option>
+                    <option value="visa_number">Visa Number</option>
+                    <option value="insurance_company">Insurance Company</option>
+                    <option value="identity_document_number">Identity Document Number</option>
+                    <option value="transaction_number">Transaction Number</option>
+                    <option value="national_health_insurance_number">National Health Insurance Number</option>
+                    <option value="cvc">CVC (Card Verification Code)</option>
+                    <option value="birth_certificate_number">Birth Certificate Number</option>
+                    <option value="train_ticket_number">Train Ticket Number</option>
+                    <option value="passport_expiration_date">Passport Expiration Date</option>
+                </select>
+                <p><small>Hold down Ctrl (Windows) or Command (Mac) to select multiple options.</small></p>
+            </div>
+           
+            <div class="form-group">
+                <label>Redaction Style</label>
+                <div class="radio-cards">
+                    <label class="radio-card">
+                        <input type="radio" name="redaction_style" value="blur" checked>
+                        <div class="card-content">
+                            <span class="card-title">Blur</span>
+                            <span class="card-description">Sensitive info is blurred for confidentiality.</span>
+                        </div>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="redaction_style" value="blackout">
+                        <div class="card-content">
+                            <span class="card-title">Blackout</span>
+                            <span class="card-description">Sensitive info is fully blacked out.</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+           
+            <button type="submit" class="btn">📤 Upload and Redact</button>
+        </form>
+    </div>
+    
+    <a href="/evaluate" class="download-btn" style="margin-bottom:20px;">📊 Evaluate on Benchmark</a>
+    
+    <div class="footer">
+        <p>© 2024 PDF Redaction Tool</p>
+    </div>
+    
+    <script>
+        document.getElementById('pii-search').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const options = document.querySelectorAll('#pii-types option');
+            options.forEach(opt => {
+                const text = opt.textContent.toLowerCase();
+                opt.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        document.getElementById('pii-types').addEventListener('change', function() {
+            const selectedOptions = Array.from(this.selectedOptions).map(opt => opt.value);
+        });
+        
+        // Add character counter for textarea
+        const textarea = document.getElementById('llm-text');
+        const createCounter = () => {
+            const counter = document.createElement('div');
+            counter.style.cssText = `
+                font-size: 0.8em;
+                color: rgba(255, 255, 255, 0.8);
+                text-align: right;
+                margin-top: 5px;
+            `;
+            counter.textContent = '0 characters';
+            textarea.parentNode.appendChild(counter);
+            
+            textarea.addEventListener('input', function() {
+                const count = this.value.length;
+                counter.textContent = `${count} characters`;
+                if (count > 5000) {
+                    counter.style.color = '#ff6b6b';
+                } else {
+                    counter.style.color = 'rgba(255, 255, 255, 0.8)';
+                }
+            });
+        };
+        
+        // PDF Analysis Form Handler
+        document.getElementById('pdf-analysis-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('analysis-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showError('Please select a PDF file to analyze.');
+                return;
+            }
+            
+            if (file.type !== 'application/pdf') {
+                showError('Please select a valid PDF file.');
+                return;
+            }
+            
+            // Check file size (16MB limit as per your Flask config)
+            if (file.size > 16 * 1024 * 1024) {
+                showError('File size too large. Please select a PDF smaller than 16MB.');
+                return;
+            }
+            
+            formData.append('file', file);
+            
+            // Show loading state
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const originalText = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = '⏳ Analyzing... <span class="loading-spinner"></span>';
+            analyzeBtn.disabled = true;
+            
+            // Hide previous results and errors
+            hideError();
+            document.getElementById('analysis-results').style.display = 'none';
+            
+            // Make the API call
+            fetch('/analyze_pdf', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    displayAnalysisResults(data);
+                }
+            })
+            .catch(error => {
+                console.error('Analysis error:', error);
+                showError('Analysis failed. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                analyzeBtn.innerHTML = originalText;
+                analyzeBtn.disabled = false;
+            });
+        });
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('analysis-error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('analysis-error').style.display = 'none';
+        }
+        
+        // Replace the displayAnalysisResults function in your index.html
+// Enhanced displayAnalysisResults function with better error handling
+function displayAnalysisResults(data) {
+    // Show results section
+    const resultsDiv = document.getElementById('analysis-results');
+    resultsDiv.style.display = 'block';
+    
+    // GLiNER Results (unchanged - working fine)
+    const glinerTime = document.getElementById('gliner-time');
+    const glinerEntities = document.getElementById('gliner-entities');
+    
+    glinerTime.textContent = `Processing time: ${data.gliner_analysis.processing_time_ms}ms | Entities found: ${data.gliner_analysis.total_entities}`;
+    
+    glinerEntities.innerHTML = '';
+    if (data.gliner_analysis.entities.length > 0) {
+        data.gliner_analysis.entities.forEach(entity => {
+            const li = document.createElement('li');
+            li.className = 'entity-item';
+            li.innerHTML = `
+                <span class="entity-text">"${escapeHtml(entity.text)}"</span>
+                <span class="entity-type">${entity.type} (${entity.confidence})</span>
+            `;
+            glinerEntities.appendChild(li);
+        });
+    } else {
+        glinerEntities.innerHTML = '<li class="entity-item">No PII entities detected</li>';
+    }
+    
+    // Anthropic Results - FIXED TO MATCH BACKEND STRUCTURE
+    const anthropicTime = document.getElementById('anthropic-time');
+    const anthropicResults = document.getElementById('anthropic-results');
+    
+    anthropicTime.textContent = `Processing time: ${data.anthropic_analysis.processing_time_ms}ms | Entities found: ${data.anthropic_analysis.total_entities}`;
+    
+    // Clear previous results
+    anthropicResults.innerHTML = '';
+    
+    // Check if there's an error in the Anthropic response
+    if (data.anthropic_analysis.error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            color: rgba(255, 255, 255, 0.9); 
+            padding: 15px; 
+            background: rgba(231, 76, 60, 0.3); 
+            border-radius: 8px;
+            border-left: 4px solid #e74c3c;
+        `;
+        
+        errorDiv.innerHTML = `
+            <strong>⚠️ Analysis Error:</strong><br>
+            <div style="margin-top: 8px; font-family: monospace; font-size: 0.9em;">
+                ${escapeHtml(data.anthropic_analysis.error)}
+            </div>
+        `;
+        
+        anthropicResults.appendChild(errorDiv);
+    } else {
+        // Normal successful results - CHECK FOR ENTITIES ARRAY
+        if (data.anthropic_analysis.entities && data.anthropic_analysis.entities.length > 0) {
+            const successDiv = document.createElement('div');
+            successDiv.innerHTML = '<strong>✅ Successfully analyzed with Claude AI:</strong>';
+            successDiv.style.cssText = 'margin-bottom: 10px; color: rgba(255, 255, 255, 0.9);';
+            anthropicResults.appendChild(successDiv);
+            
+            const entityList = document.createElement('ul');
+            entityList.className = 'entity-list';
+            
+            data.anthropic_analysis.entities.forEach(entity => {
+                const li = document.createElement('li');
+                li.className = 'entity-item';
+                li.innerHTML = `
+                    <span class="entity-text">"${escapeHtml(entity.text)}"</span>
+                    <span class="entity-type">${entity.type} (${entity.start}-${entity.end})</span>
+                `;
+                entityList.appendChild(li);
+            });
+            
+            anthropicResults.appendChild(entityList);
+            
+            // Add entity type summary
+            const entityTypes = [...new Set(data.anthropic_analysis.entities.map(e => e.type))];
+            if (entityTypes.length > 0) {
+                const summaryDiv = document.createElement('div');
+                summaryDiv.style.cssText = `
+                    background: rgba(255, 255, 255, 0.1); 
+                    padding: 12px; 
+                    border-radius: 6px; 
+                    margin-top: 15px;
+                    font-size: 0.9em;
+                `;
+                summaryDiv.innerHTML = `
+                    <strong>📊 Analysis Summary:</strong><br>
+                    <div style="margin-top: 8px;">
+                        <strong>Entity Types Found:</strong> ${entityTypes.join(', ')}
+                    </div>
+                `;
+                anthropicResults.appendChild(summaryDiv);
+            }
+        } else {
+            // No PII detected
+            const noPiiDiv = document.createElement('div');
+            noPiiDiv.className = 'entity-item';
+            noPiiDiv.style.cssText += ' background: rgba(46, 204, 113, 0.2); border-left: 4px solid #2ecc71;';
+            noPiiDiv.innerHTML = '✅ No PII entities detected - Document appears clean';
+            anthropicResults.appendChild(noPiiDiv);
+        }
+    }
+    
+    // Comparison Summary - Enhanced version with error awareness
+    displayComparisonSummary(data);
+    
+    // Scroll to results
+    resultsDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Helper functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getRiskColor(riskLevel) {
+    switch(riskLevel?.toLowerCase()) {
+        case 'high': return '#e74c3c';
+        case 'medium': return '#f39c12'; 
+        case 'low': return '#27ae60';
+        default: return '#95a5a6';
+    }
+}
+
+function displayComparisonSummary(data) {
+    const comparisonDetails = document.getElementById('comparison-summary');
+    const comparison = data.comparison;
+    
+    // Calculate metrics
+    const glinerAccuracy = data.gliner_analysis.entities.length;
+    const claudeAccuracy = data.anthropic_analysis.total_entities;
+    const speedImprovement = comparison.gliner_faster ? 
+        ((comparison.time_difference_ms / data.anthropic_analysis.processing_time_ms) * 100).toFixed(1) :
+        ((comparison.time_difference_ms / data.gliner_analysis.processing_time_ms) * 100).toFixed(1);
+    
+    const hasClaudeError = data.anthropic_analysis.error;
+    
+    comparisonDetails.innerHTML = `
+        <div class="results-title">📊 Performance Comparison</div>
+        
+        ${hasClaudeError ? `
+            <div style="background: rgba(231, 76, 60, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #e74c3c;">
+                <strong>⚠️ Note:</strong> Claude AI encountered issues during analysis. Comparison may be limited.
+            </div>
+        ` : ''}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 8px;">
+                <strong>⚡ Speed Winner:</strong><br>
+                <div style="font-size: 1.1em; margin: 5px 0;">
+                    ${comparison.gliner_faster ? '🧠 GLiNER' : '🤖 Claude AI'}
+                </div>
+                <small>${speedImprovement}% faster (${comparison.time_difference_ms}ms difference)</small>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 8px;">
+                <strong>🔍 Detection Count:</strong><br>
+                <div style="margin: 5px 0;">
+                    GLiNER: ${glinerAccuracy} | Claude: ${claudeAccuracy}${hasClaudeError ? ' (error)' : ''}
+                </div>
+                <small>Difference: ${Math.abs(comparison.entity_count_difference)} entities</small>
+            </div>
+        </div>
+        
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <strong>📄 Document Details:</strong><br>
+            <div style="margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                <div><strong>File:</strong> ${escapeHtml(data.file_info.filename)}</div>
+                <div><strong>Pages:</strong> ${data.file_info.pages}</div>
+                <div><strong>Characters:</strong> ${data.file_info.text_length.toLocaleString()}</div>
+                <div><strong>Timestamp:</strong> ${new Date().toLocaleTimeString()}</div>
+            </div>
+        </div>
+        
+        <div style="background: linear-gradient(45deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05)); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <strong>💡 Analysis Summary:</strong><br>
+            <div style="margin-top: 10px; line-height: 1.5;">
+                ${comparison.gliner_faster 
+                    ? `GLiNER was <strong>${speedImprovement}%</strong> faster, processing in ${data.gliner_analysis.processing_time_ms}ms vs ${data.anthropic_analysis.processing_time_ms}ms for Claude.`
+                    : `Claude AI was <strong>${speedImprovement}%</strong> faster, processing in ${data.anthropic_analysis.processing_time_ms}ms vs ${data.gliner_analysis.processing_time_ms}ms for GLiNER.`
+                }
+                ${!hasClaudeError && Math.abs(comparison.entity_count_difference) > 0 
+                    ? ` ${comparison.entity_count_difference > 0 ? 'GLiNER' : 'Claude'} detected ${Math.abs(comparison.entity_count_difference)} more PII ${Math.abs(comparison.entity_count_difference) === 1 ? 'entity' : 'entities'}.`
+                    : !hasClaudeError ? ' Both methods detected the same number of entities.' : ''
+                }
+                ${hasClaudeError ? ' <strong>GLiNER provided more reliable results in this analysis.</strong>' : ''}
+            </div>
+        </div>
+    `;
+}
+        
+        // Add counter when page loads
+        document.addEventListener('DOMContentLoaded', createCounter);
+    </script>
+</body>
+</html>
